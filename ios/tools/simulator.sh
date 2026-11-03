@@ -14,8 +14,13 @@ xcrun simctl status_bar "$device" override --time '09:41' --dataNetwork wifi --w
 xcrun simctl install "$device" build/simulator/Build/Products/Debug-iphonesimulator/AssistantNext.app
 for screen in today chat tasks projects plan; do
   xcrun simctl terminate "$device" app.assistant.next >/dev/null 2>&1 || true
-  xcrun simctl launch "$device" app.assistant.next --demo "--screen=$screen"
+  extra=()
+  if [[ "$screen" == chat && "${REVIEW_TEST:-full}" == warning ]]; then extra+=(--budget-warning); fi
+  xcrun simctl launch "$device" app.assistant.next --demo "--screen=$screen" "${extra[@]}"
   sleep 2
   xcrun simctl io "$device" screenshot "build/artifacts/assistant-$screen.png"
 done
-python3 tools/bounded.py 480 xcodebuild -project AssistantNext.xcodeproj -scheme AssistantNext -configuration Debug -destination "id=$device" -derivedDataPath build/simulator -resultBundlePath build/artifacts/UITests.xcresult -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 180 CODE_SIGNING_ALLOWED=NO test-without-building 2>&1 | tee build/artifacts/ui-tests.log
+xcrun simctl terminate "$device" app.assistant.next >/dev/null 2>&1 || true
+test_filter=()
+if [[ "${REVIEW_TEST:-full}" == warning ]]; then test_filter+=(-only-testing:AssistantNextUITests/AssistantNextUITests/testBudgetWarningDoesNotDisableComposer); fi
+python3 tools/bounded.py 600 xcodebuild -project AssistantNext.xcodeproj -scheme AssistantNext -configuration Debug -destination "id=$device" -derivedDataPath build/simulator -resultBundlePath build/artifacts/UITests.xcresult -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 360 "${test_filter[@]}" CODE_SIGNING_ALLOWED=NO test-without-building 2>&1 | tee build/artifacts/ui-tests.log

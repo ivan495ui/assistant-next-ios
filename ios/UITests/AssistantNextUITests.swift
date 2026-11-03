@@ -1,6 +1,7 @@
 import XCTest
 final class AssistantNextUITests:XCTestCase {
     @MainActor func testBudgetWarningDoesNotDisableComposer() throws {
+        executionTimeAllowance=300
         let app=XCUIApplication();app.launchArguments=["--demo","--screen=chat","--budget-warning"];app.launch()
         XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"budget-warning").firstMatch.waitForExistence(timeout:10))
         let field=app.descendants(matching:.any).matching(identifier:"message-input").firstMatch

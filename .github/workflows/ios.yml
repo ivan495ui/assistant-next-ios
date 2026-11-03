@@ -4,7 +4,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [full, device]
+        options: [full, device, warning]
         default: full
 permissions:
   contents: read
@@ -40,6 +40,8 @@ jobs:
           cd build/package && zip -qry ../artifacts/assistant-next-unsigned.ipa Payload
       - name: Real simulator and UI checks
         if: inputs.mode != 'device'
+        env:
+          REVIEW_TEST: ${{ inputs.mode }}
         working-directory: ios
         run: bash tools/simulator.sh
       - name: Upload candidate and evidence
