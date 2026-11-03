@@ -1,0 +1,14 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {initialState} from '../core/state.mjs';import {buildProposal,confirmProposal} from '../core/proposal.mjs';
+const start='2026-11-04T06:00:00.000Z',end='2026-11-04T10:00:00.000Z';
+const now=Date.parse('2026-11-03T06:00:00Z');
+const raw={intent:'plan',reply:'План',questions:[],tasks:[],projects:[],eventMoves:[],newEvents:[],memories:[],windows:[{start,end}],from:'2026-11-04',to:'2026-11-04',reschedule:true,breakMinutes:10};
+test('move meeting, keep duration, replan existing tasks with stable IDs',()=>{
+ const s=initialState();s.events=[{id:'call',title:'Созвон',start:'2026-11-04T08:00:00Z',end:'2026-11-04T08:30:00Z',fixed:true,revision:1}];
+ s.tasks=[{id:'slides',title:'Слайды',durationMinutes:60,priority:2,status:'open',revision:1,start:'2026-11-04T06:00:00Z',end:'2026-11-04T07:00:00Z',dependsOn:[]},{id:'mail',title:'Письма',durationMinutes:45,priority:2,status:'open',revision:1,start:'2026-11-04T08:40:00Z',end:'2026-11-04T09:25:00Z',dependsOn:[]}];
+ const p=buildProposal({...raw,eventMoves:[{id:'call',start:'2026-11-04T09:00:00Z',quote:'перенеси'}]},s,{id:'move-call',now});s.proposals.push(p);const result=confirmProposal(s,p.id,{now}).state;
+ assert.equal(result.events.length,1);assert.equal(result.events[0].id,'call');assert.equal(Date.parse(result.events[0].end)-Date.parse(result.events[0].start),1800000);assert.equal(result.tasks.length,2);assert.deepEqual(new Set(result.tasks.map(t=>t.id)),new Set(['slides','mail']));assert.ok(result.tasks.every(t=>t.durationMinutes===s.tasks.find(x=>x.id===t.id).durationMinutes));
+});
+test('independent repeated create reuses matching task ID',()=>{const s=initialState();s.tasks=[{id:'existing',title:'Сценарий',status:'open',durationMinutes:30,dueDate:null,revision:1}];const p=buildProposal({...raw,reschedule:false,tasks:[{ref:'a',title:'сценарий',durationMinutes:30,dueDate:null,dependsOn:[],priority:2,order:0}]},s,{id:'repeat',now});assert.equal(p.actions[0].id,'existing');s.proposals.push(p);assert.equal(confirmProposal(s,p.id,{now}).state.tasks.length,1);});
+test('all-day busy event blocks complete day',()=>{const s=initialState();s.events=[{id:'trip',title:'Поездка',allDayDate:'2026-11-04',revision:1}];const p=buildProposal({...raw,tasks:[{ref:'a',title:'Работа',durationMinutes:30,dependsOn:[],order:0}]},s,{id:'allday',now});assert.equal(p.unscheduled.length,1);});
+test('fixed meeting move cannot silently overlap an unscheduled-for-replan task',()=>{const s=initialState();s.events=[{id:'call',title:'Созвон',start:'2026-11-04T08:00:00Z',end:'2026-11-04T08:30:00Z',revision:1}];s.tasks=[{id:'t',title:'Дело',status:'open',start:'2026-11-04T09:00:00Z',end:'2026-11-04T10:00:00Z',revision:1}];assert.throws(()=>buildProposal({...raw,reschedule:false,eventMoves:[{id:'call',start:'2026-11-04T09:00:00Z'}]},s,{id:'conflict',now}),e=>e.code==='event_task_conflict');});

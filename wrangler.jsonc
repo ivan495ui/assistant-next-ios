@@ -1,0 +1,8 @@
+{
+  "name": "assistant-next-20261103",
+  "main": "server/worker.mjs",
+  "compatibility_date": "2026-10-01",
+  "durable_objects": {"bindings":[{"name":"OWNER","class_name":"AssistantOwner"}]},
+  "migrations": [{"tag":"v1","new_sqlite_classes":["AssistantOwner"]}],
+  "observability": {"enabled":false}
+}

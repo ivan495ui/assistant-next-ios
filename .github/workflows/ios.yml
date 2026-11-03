@@ -1,0 +1,43 @@
+name: Native assistant candidate
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: assistant-next-native
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.event.repository.private == false
+    runs-on: xcode-27
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Verify core
+        run: |
+          node --test tests/*.test.mjs
+          node tools/check.mjs
+          node tools/demo.mjs
+      - name: Generate Xcode project
+        working-directory: ios
+        run: |
+          xcodebuild -version
+          if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
+          xcodegen generate
+      - name: Build device IPA
+        working-directory: ios
+        run: |
+          mkdir -p build/artifacts build/package/Payload
+          xcodebuild -project AssistantNext.xcodeproj -scheme AssistantNext -configuration Release -sdk iphoneos -derivedDataPath build/device CODE_SIGNING_ALLOWED=NO build >build/artifacts/device-build.log 2>&1
+          cp -R build/device/Build/Products/Release-iphoneos/AssistantNext.app build/package/Payload/
+          cd build/package && zip -qry ../artifacts/assistant-next-unsigned.ipa Payload
+      - name: Real simulator and UI checks
+        working-directory: ios
+        run: bash tools/simulator.sh
+      - name: Upload candidate and evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: assistant-next-candidate
+          path: ios/build/artifacts/
+          retention-days: 1

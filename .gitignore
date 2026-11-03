@@ -1,0 +1,10 @@
+.DS_Store
+node_modules/
+private/
+.env*
+*.dpapi
+*.p12
+*.mobileprovision
+build/
+*.xcodeproj/
+.wrangler/
