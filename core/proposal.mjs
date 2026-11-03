@@ -25,7 +25,7 @@ export function buildProposal(raw,state,{id,now=Date.now()}) {
   ensure(new Set(refIDs.values()).size===refIDs.size,'duplicate_task','Один пункт повторяется в плане. Объедини его перед сохранением.');
   const planned=resolved.map(t=>{
     const before=t.id?state.tasks.find(x=>x.id===t.id):null;
-    return {...(before||{}),id:refIDs.get(t.ref),title:t.title,durationMinutes:t.durationMinutes,durationEstimated:t.durationEstimated,dueDate:t.dueDate,deadlineAt:t.deadlineAt||(t.dueDate?wall(addDays(t.dueDate,1),'00:00',state.profile.timeZone):null),notBefore:t.notBefore,fixedStart:t.fixedStart,priority:t.priority,projectID:projectIDs.get(t.projectRef)||t.projectRef||null,dependsOn:t.dependsOn.map(ref=>refIDs.get(ref)),order:t.order,status:before?.status||'open',revision:(before?.revision||0)+1};
+    return {...(before||{}),id:refIDs.get(t.ref),title:t.title,durationMinutes:t.durationMinutes,durationEstimated:t.durationEstimated,dueDate:t.dueDate,deadlineAt:t.deadlineAt||(t.dueDate?wall(addDays(t.dueDate,1),'00:00',state.profile.timeZone):null),notBefore:t.notBefore,fixedStart:t.fixedStart,priority:t.priority,projectID:projectIDs.get(t.projectRef)||t.projectRef||null,dependsOn:t.dependsOn.map(ref=>refIDs.get(ref)||ref),order:t.order,status:before?.status||'open',revision:(before?.revision||0)+1};
   });
   if(raw.reschedule)for(const task of state.tasks) {
     if(task.status!=='open'||planned.some(t=>t.id===task.id))continue;

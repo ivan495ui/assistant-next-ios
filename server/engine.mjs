@@ -8,7 +8,7 @@ import {modelContext} from './prompt.mjs';
 
 export class Engine {
   constructor(repository,{model=new DeepSeekModel({}),now=()=>Date.now(),limits={day:0.10,month:1}}={}){Object.assign(this,{repository,model,now,limits});}
-  async snapshot(){return publicSnapshot(await this.repository.read(),{aiAvailable:this.model.available,now:this.now()});}
+  async snapshot(){return {...publicSnapshot(await this.repository.read(),{aiAvailable:this.model.available,now:this.now()}),build:'next-durable-2'};}
   async enqueue({requestID,text}) {
     ensure(typeof requestID==='string'&&/^[a-zA-Z0-9_-]{12,80}$/.test(requestID),'request_id','Не удалось определить запрос.');
     ensure(typeof text==='string'&&text.trim()&&text.length<=24000,'input','Сообщение должно содержать от 1 до 24 000 символов.');
@@ -62,8 +62,8 @@ export class Engine {
       const p=state.proposals.find(p=>p.id===proposalID);ensure(p&&p.status==='draft','proposal_missing','Предложение уже закрыто.',409);
       ensure(p.baseRevision===state.dataRevision,'proposal_stale','Дела изменились. Сначала обнови предложение.',409);
       const action=p.actions.find(a=>a.id===taskID&&a.kind==='task');ensure(action,'task_missing','Пункт не найден.');
-      const raw=copy(p.raw),rawTask=raw.tasks.find(t=>t.id===taskID)||raw.tasks.find((t,i)=>`${p.id}-task-${i}`===taskID);
-      ensure(rawTask,'edit','Этот пункт можно изменить новой просьбой в чате.');
+      const raw=copy(p.raw);let rawTask=raw.tasks.find(t=>t.id===taskID)||raw.tasks.find((t,i)=>`${p.id}-task-${i}`===taskID);
+      if(!rawTask){const item=action.after;rawTask={...copy(item),ref:'edited-'+item.id,id:item.id,projectRef:item.projectID||null,order:raw.tasks.length,quote:'Изменено владельцем в карточке плана',dependsOn:item.dependsOn||[]};raw.tasks.push(rawTask);}
       ensure(Number.isInteger(durationMinutes)&&durationMinutes>=5&&durationMinutes<=1440,'duration','Длительность от 5 до 1440 минут.');
       ensure(dueDate==null||validDate(dueDate),'date','Нужна существующая дата.');
       rawTask.durationMinutes=durationMinutes;rawTask.durationEstimated=false;rawTask.dueDate=dueDate||null;
