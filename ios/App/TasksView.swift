@@ -25,7 +25,52 @@ struct TaskEditor: View {
     @State private var projectID=""
     @State private var saving=false
     var body:some View {
-        NavigationStack{Form{Section("Дело"){TextField("Что нужно сделать",text:$title,axis:.vertical).lineLimit(2...6).accessibilityIdentifier("task-title")};Section{Toggle("Оценить длительность",isOn:$knownDuration);if knownDuration{Stepper("\(duration) минут",value:$duration,in:5...1440,step:5)};Toggle("Есть срок",isOn:$hasDue);if hasDue{DatePicker("Успеть до",selection:$due,displayedComponents:.date)}}footer:{Text("Дата без времени останется сроком. Встреча в полночь не создаётся.")};if !store.snapshot.projects.isEmpty{Section("Проект"){Picker("Проект",selection:$projectID){Text("Без проекта").tag("");ForEach(store.snapshot.projects){Text($0.displayTitle).tag($0.id)}}}}.scrollContentBackground(.hidden).background(Design.background).navigationTitle(task==nil ? "Новое дело":"Редактировать").navigationBarTitleDisplayMode(.inline).toolbar{ToolbarItem(placement:.cancellationAction){Button("Отмена"){dismiss()}};ToolbarItem(placement:.confirmationAction){Button("Сохранить"){saving=true;Task{await store.saveTask(existing:task,title:title,duration:knownDuration ? duration:nil,dueDate:hasDue ? Dates.day(due,zone:store.zone):nil,projectID:projectID.isEmpty ? nil:projectID,done:task?.status=="done");saving=false;if store.notice==nil || !store.pending.isEmpty{dismiss()}}}.disabled(title.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty||saving).accessibilityIdentifier("save-task")}}}
-            .onAppear{if let task{title=task.displayTitle;duration=task.durationMinutes ?? 30;knownDuration=task.durationMinutes != nil;hasDue=task.dueDate != nil;projectID=task.projectID ?? "";if let date=task.dueDate{due=Dates.parse(date+"T12:00:00Z") ?? Date()}}}
+        NavigationStack {
+            Form {
+                Section("Дело") {
+                    TextField("Что нужно сделать",text:$title,axis:.vertical).lineLimit(2...6).accessibilityIdentifier("task-title")
+                }
+                Section {
+                    Toggle("Оценить длительность",isOn:$knownDuration)
+                    if knownDuration {Stepper("\(duration) минут",value:$duration,in:5...1440,step:5)}
+                    Toggle("Есть срок",isOn:$hasDue)
+                    if hasDue {DatePicker("Успеть до",selection:$due,displayedComponents:.date)}
+                } footer: {
+                    Text("Дата без времени останется сроком. Встреча в полночь не создаётся.")
+                }
+                if !store.snapshot.projects.isEmpty {
+                    Section("Проект") {
+                        Picker("Проект",selection:$projectID) {
+                            Text("Без проекта").tag("")
+                            ForEach(store.snapshot.projects) {Text($0.displayTitle).tag($0.id)}
+                        }
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden).background(Design.background)
+            .navigationTitle(task==nil ? "Новое дело":"Редактировать").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement:.cancellationAction) {Button("Отмена"){dismiss()}}
+                ToolbarItem(placement:.confirmationAction) {
+                    Button("Сохранить") {
+                        saving=true
+                        Task {
+                            await store.saveTask(existing:task,title:title,duration:knownDuration ? duration:nil,dueDate:hasDue ? Dates.day(due,zone:store.zone):nil,projectID:projectID.isEmpty ? nil:projectID,done:task?.status=="done")
+                            saving=false
+                            if store.notice==nil || !store.pending.isEmpty {dismiss()}
+                        }
+                    }
+                    .disabled(title.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty||saving)
+                    .accessibilityIdentifier("save-task")
+                }
+            }
+        }
+        .onAppear {
+            if let task {
+                title=task.displayTitle;duration=task.durationMinutes ?? 30;knownDuration=task.durationMinutes != nil
+                hasDue=task.dueDate != nil;projectID=task.projectID ?? ""
+                if let date=task.dueDate {due=Dates.parse(date+"T12:00:00Z") ?? Date()}
+            }
+        }
     }
 }
