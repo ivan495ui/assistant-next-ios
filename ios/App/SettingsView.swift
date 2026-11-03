@@ -28,6 +28,14 @@ struct SettingsView:View {
                         Text("Здесь появятся факты и предпочтения, которые ты попросишь запомнить.").foregroundStyle(Design.secondary)
                     } else {ForEach(store.snapshot.memory){item in Text(item.displayTitle).font(.subheadline)}}
                 }
+                Section("Расходы ИИ") {
+                    if let budget=store.snapshot.budget {
+                        LabeledContent("Период",value:budget.period)
+                        LabeledContent("Оценка расходов",value:String(format:"$%.4f",budget.usedUsd))
+                        LabeledContent("Порог предупреждения",value:String(format:"$%.2f",budget.thresholdUsd))
+                        Text("Превышение порога не останавливает ИИ. Оценка использует верхние тарифы и резервы запросов без подтверждённого ответа. Фактический счёт показывает DeepSeek.").font(.caption).foregroundStyle(Design.secondary)
+                    } else {Text("Сведения появятся после обновления данных.")}
+                }
                 Section("Состояние") {
                     LabeledContent("ИИ",value:store.snapshot.aiAvailable ? "Подключён":"Не подключён")
                     LabeledContent("На отправку",value:"\(store.pending.count)")
@@ -38,7 +46,7 @@ struct SettingsView:View {
                     Button("Открыть экспорт 25.3"){importingLegacy=true;importing=true}
                     Text("Сначала появится предварительный просмотр. Старый файл и записи Google не изменяются.").font(.caption).foregroundStyle(Design.secondary)
                 }
-                Section {Text("Ассистент · новая версия 4.0 (1)").font(.caption).foregroundStyle(Design.secondary)}
+                Section {Text("Ассистент · версия 4.1 (2)").font(.caption).foregroundStyle(Design.secondary)}
             }
             .scrollContentBackground(.hidden).background(Design.background).navigationTitle("Настройки")
             .toolbar{ToolbarItem(placement:.confirmationAction){Button("Готово"){dismiss()}}}

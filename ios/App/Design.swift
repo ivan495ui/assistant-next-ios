@@ -17,9 +17,12 @@ struct EmptyCard: View {var symbol:String;var title:String;var text:String;var b
 struct StatusBanner: View {
     @EnvironmentObject var store:AssistantStore
     var body:some View {
+        VStack(spacing:6) {
         if store.isDemo {Label("Тестовые данные · предпросмотр",systemImage:"circle.dotted").font(.caption).foregroundStyle(Design.accent).padding(.horizontal,20).padding(.vertical,8).frame(maxWidth:.infinity,alignment:.leading)}
         else if let notice=store.notice {HStack(alignment:.top,spacing:10){Image(systemName:"wifi.exclamationmark");Text(notice).fixedSize(horizontal:false,vertical:true);Spacer();Button{Task{await store.refresh()}}label:{Image(systemName:"arrow.clockwise")}.accessibilityLabel("Проверить связь")}.font(.caption).foregroundStyle(.orange).padding(14).background(Color.orange.opacity(0.08),in:RoundedRectangle(cornerRadius:16)).padding(.horizontal,20)}
         else if !store.pending.isEmpty {Label("Сохранено на телефоне · ожидает отправки",systemImage:"arrow.triangle.2.circlepath").font(.caption).foregroundStyle(Design.secondary).padding(.horizontal,20).padding(.vertical,8)}
+        if let budget=store.snapshot.budget,budget.exceeded {Label(budget.message ?? "Порог расходов превышен. ИИ продолжает работать.",systemImage:"info.circle").font(.caption).foregroundStyle(.orange).padding(14).frame(maxWidth:.infinity,alignment:.leading).background(Color.orange.opacity(0.08),in:RoundedRectangle(cornerRadius:16)).padding(.horizontal,20).accessibilityIdentifier("budget-warning")}
+        }
     }
 }
 struct TaskLine: View {

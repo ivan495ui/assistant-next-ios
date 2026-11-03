@@ -88,6 +88,9 @@ export function confirmProposal(state,proposalID,{now=Date.now()}={}) {
   }
   next.dataRevision++;next.proposals.find(p=>p.id===proposalID).status='confirmed';
   const value={id:proposalID,proposalID,status:'saved',at:new Date(now).toISOString(),results};next.receipts.push(value);
-  next.messages.push({id:`${proposalID}-receipt`,role:'assistant',text:`Сохранено: ${results.length}.`+(next.syncJobs.some(j=>j.status==='pending')?' Синхронизация с Google ожидает отдельной проверки.':''),at:value.at,proposalID:null});
+  const timed=proposal.actions.filter(a=>['task','event'].includes(a.kind)&&a.after.start).length;
+  const inbox=proposal.actions.filter(a=>a.kind==='task'&&!a.after.start).length;
+  const summary=timed?`План сохранил. Блоков по времени: ${timed}. Смотри «Сегодня».`:`Изменения сохранил: ${results.length}.`;
+  next.messages.push({id:`${proposalID}-receipt`,role:'assistant',text:summary+(inbox?` Без времени осталось: ${inbox}. Они в «Делах».`:'')+(next.syncJobs.some(j=>j.status==='pending')?' Синхронизация с Google ожидает отдельной проверки.':''),at:value.at,proposalID:null});
   return {state:next,receipt:value,duplicate:false};
 }

@@ -47,7 +47,12 @@ export function validateExtraction(raw,{sourceTexts, state}) {
   if(from)ensure(validDate(from)&&validDate(to)&&from<=to,'range','Не удалось проверить период планирования.');
   const reschedule=raw.reschedule===true;
   if(reschedule)ensure(from&&to,'range','Для перестройки нужен точный период.');
+  const scheduleMode=['timed','inbox','none'].includes(raw.scheduleMode)?raw.scheduleMode:null;
+  if(scheduleMode==='timed'){
+    ensure(from||windows.length,'schedule_period','Чтобы распределить дела по часам, нужно определить день или период.');
+    ensure(tasks.every(t=>t.durationMinutes!=null),'schedule_duration','Для расписания нужны оценки длительности. Предложи оценки гибких дел или уточни важные ограничения.');
+  }
   if(raw.breakMinutes!=null)ensure(Number.isInteger(raw.breakMinutes)&&raw.breakMinutes>=0&&raw.breakMinutes<=120,'break','Неподходящая длительность перерыва.');
-  return {intent:raw.intent,reply,questions,tasks,eventMoves,newEvents,projects,memories,windows,from,to,reschedule,breakMinutes:raw.breakMinutes??null};
+  return {intent:raw.intent,scheduleMode,reply,questions,tasks,eventMoves,newEvents,projects,memories,windows,from,to,reschedule,breakMinutes:raw.breakMinutes??null};
 }
 export const cleanExtraction=value=>copy(value);

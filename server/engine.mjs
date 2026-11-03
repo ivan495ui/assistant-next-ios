@@ -6,10 +6,11 @@ import {validDate,zoneValid,localDate} from '../core/time.mjs';
 import {reservationFor,DeepSeekModel} from './model.mjs';
 import {modelContext} from './prompt.mjs';
 import {previewLegacyImport} from '../core/legacy.mjs';
+import {budgetStatus} from './budget.mjs';
 
 export class Engine {
   constructor(repository,{model=new DeepSeekModel({}),now=()=>Date.now(),limits={day:0.10,month:1}}={}){Object.assign(this,{repository,model,now,limits});}
-  async snapshot(){return {...publicSnapshot(await this.repository.read(),{aiAvailable:this.model.available,now:this.now()}),build:'next-durable-2'};}
+  async snapshot(){const state=await this.repository.read();return {...publicSnapshot(state,{aiAvailable:this.model.available,now:this.now()}),budget:budgetStatus(state,this.limits,this.now()),build:'next-conversation-3'};}
   async enqueue({requestID,text}) {
     ensure(typeof requestID==='string'&&/^[a-zA-Z0-9_-]{12,80}$/.test(requestID),'request_id','Не удалось определить запрос.');
     ensure(typeof text==='string'&&text.trim()&&text.length<=24000,'input','Сообщение должно содержать от 1 до 24 000 символов.');
@@ -31,7 +32,7 @@ export class Engine {
         ensure(this.model.available,'ai_not_connected','ИИ пока не подключён. Текст сохранён, ручные дела доступны.',503);
         const now=this.now(),day=localDate(now,state.profile.timeZone),month=day.slice(0,7),reserve=reservationFor(modelContext(state,job.text,now));
         const used=range=>state.usage.filter(u=>u.day.startsWith(range)).reduce((sum,u)=>sum+u.charged,0)+(range===this.limits.baselineDay||range===this.limits.baselineMonth?Number(this.limits.baselineUsd||0):0);
-        ensure(used(day)+reserve<=this.limits.day+1e-9&&used(month)+reserve<=this.limits.month+1e-9,'budget','Достигнут установленный бюджет ИИ. Текст сохранён; ручное планирование доступно.',429);
+        if(this.limits.mode==='hard')ensure(used(day)+reserve<=this.limits.day+1e-9&&used(month)+reserve<=this.limits.month+1e-9,'budget','Достигнут установленный бюджет тестирования ИИ.',429);
         state.usage.push({id:job.id,day,reserved:reserve,charged:reserve,status:'reserved'});
         job.status='running';job.updatedAt=new Date(now).toISOString();job.reservation=reserve;
         return {state:copy(state),job:copy(job),now};
@@ -41,9 +42,9 @@ export class Engine {
       await this.repository.transact(state=>{
         const job=state.jobs.find(j=>j.id===jobID);if(job.status!=='running')return;
         const sources=context.state.messages.filter(m=>m.role==='user').slice(-16).map(m=>m.text);
-        const raw=validateExtraction(result.extraction,{sourceTexts:sources,state:context.state});
         const usage=state.usage.find(u=>u.id===jobID);
         if(result.usage&&Number.isFinite(result.usage.usd)&&result.usage.usd>=0){usage.charged=Math.max(result.usage.usd,0);usage.status='measured';usage.tokens=result.usage;}
+        const raw=validateExtraction(result.extraction,{sourceTexts:sources,state:context.state});
         let proposal=null;
         if(raw.intent!=='chat') {
           ensure(state.dataRevision===context.state.dataRevision,'context_stale','Во время подготовки дела изменились. Просьба сохранена; обнови план.',409);
@@ -52,7 +53,8 @@ export class Engine {
           else proposal=null;
         }
         job.status='completed';job.proposalID=proposal?.id||null;job.updatedAt=new Date(this.now()).toISOString();
-        state.messages.push({id:`${jobID}-answer`,role:'assistant',text:raw.reply+(raw.questions.length?'\n'+raw.questions.join('\n'):''),at:job.updatedAt,proposalID:proposal?.id||null});
+        const warning=budgetStatus(state,this.limits,this.now()).message;
+        state.messages.push({id:`${jobID}-answer`,role:'assistant',text:raw.reply+(raw.questions.length?'\n'+raw.questions.join('\n'):'')+(warning?'\n\n'+warning:''),at:job.updatedAt,proposalID:proposal?.id||null});
       });
     }catch(error){await this.repository.transact(state=>{const job=state.jobs.find(j=>j.id===jobID);if(!job||job.status==='completed')return;job.status=error.code==='ai_uncertain'?'uncertain':'failed';job.error=safeError(error).error;job.updatedAt=new Date(this.now()).toISOString();if(!state.messages.some(m=>m.id===`${jobID}-error`))state.messages.push({id:`${jobID}-error`,role:'assistant',text:job.error,at:job.updatedAt,proposalID:null});});}
   }

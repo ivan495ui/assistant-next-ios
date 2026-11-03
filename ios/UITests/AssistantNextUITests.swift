@@ -1,5 +1,12 @@
 import XCTest
 final class AssistantNextUITests:XCTestCase {
+    @MainActor func testBudgetWarningDoesNotDisableComposer() throws {
+        let app=XCUIApplication();app.launchArguments=["--demo","--screen=chat","--budget-warning"];app.launch()
+        XCTAssertTrue(app.descendants(matching:.any).matching(identifier:"budget-warning").firstMatch.waitForExistence(timeout:10))
+        let field=app.descendants(matching:.any).matching(identifier:"message-input").firstMatch
+        XCTAssertTrue(field.exists);field.tap();field.typeText("Новый план")
+        XCTAssertTrue(app.buttons["Отправить сообщение"].isEnabled)
+    }
     @MainActor func testTabsAndPlan() throws {
         let app=XCUIApplication();app.launchArguments=["--demo"];app.launch()
         XCTAssertTrue(app.tabBars.buttons["Сегодня"].waitForExistence(timeout:15))

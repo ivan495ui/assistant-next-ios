@@ -70,6 +70,13 @@ struct Job: Codable, Identifiable {
     var error: String?
 }
 struct SyncJob: Codable, Identifiable {var id: String; var status: String; var entityID: String; var kind: String; var revision: Int}
+struct Budget: Codable {
+    var period: String
+    var usedUsd: Double
+    var thresholdUsd: Double
+    var exceeded: Bool
+    var message: String?
+}
 struct Snapshot: Codable {
     var ok = true
     var schema = 1
@@ -85,6 +92,7 @@ struct Snapshot: Codable {
     var jobs: [Job] = []
     var syncJobs: [SyncJob] = []
     var aiAvailable = false
+    var budget: Budget?
 }
 struct Connection: Codable {var server: String; var token: String}
 struct PendingAction: Codable, Identifiable {var id: String; var route: String; var body: Data}

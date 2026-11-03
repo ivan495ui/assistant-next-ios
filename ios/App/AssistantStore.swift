@@ -30,6 +30,7 @@ import Combine
         if ProcessInfo.processInfo.arguments.contains("--demo"), let url = Bundle.main.url(forResource:"demo",withExtension:"json"),let data=try? Data(contentsOf:url),let sample=try? JSONDecoder().decode(Snapshot.self,from:data) {
             snapshot=sample;isDemo=true;connected=true;selectedDate=Dates.parse("2026-11-04T09:00:00+03:00")!;pending=[]
             let args=ProcessInfo.processInfo.arguments
+            if args.contains("--budget-warning") {snapshot.budget=Budget(period:"2026-11",usedUsd:0.052,thresholdUsd:0.05,exceeded:true,message:"Порог расходов ИИ превышен. Помощник продолжает работать.")}
             if args.contains("--screen=chat") || args.contains("--screen=plan"){tab=1}
             if args.contains("--screen=tasks"){tab=2}
             if args.contains("--screen=projects"){tab=3}
