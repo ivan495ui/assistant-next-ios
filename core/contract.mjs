@@ -11,6 +11,7 @@ export function validateExtraction(raw,{sourceTexts, state}) {
     ensure(!['tasks','eventMoves','newEvents','projects','memories'].some(k=>(raw[k]||[]).length),'model_contract','Обычный ответ не должен содержать скрытые изменения.');
     return {intent:'chat',reply,questions,tasks:[],eventMoves:[],newEvents:[],projects:[],memories:[],windows:[],reschedule:false};
   }
+  ensure(questions.length===0,'clarification_first','Сначала уточни необходимый факт отдельным ответом intent=chat без изменений. После ответа продолжи цель.');
   const evidence=quote=>{const q=text(quote,24000);ensure(sourceTexts.some(s=>s.includes(q)),'source_missing','В плане появился пункт без подтверждения в твоих словах. Просьба сохранена, записи не изменены.');return q;};
   const projects=list(raw.projects||[],16).map(p=>({ref:text(p.ref,80),id:p.id||null,title:text(p.title,120),goal:text(p.goal,1500),quote:evidence(p.quote)}));
   for(const p of projects)if(p.id)ensure(state.projects.some(x=>x.id===p.id),'project_missing','Проект уже изменился. Обновим данные.');
