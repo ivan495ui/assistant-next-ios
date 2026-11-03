@@ -12,6 +12,9 @@ test('archive growth does not grow paid conversation without bound or duplicate 
 test('timed plan cannot silently degrade to unknown duration inbox',()=>{
  const s=initialState();assert.throws(()=>previewPlan({intent:'plan',scheduleMode:'timed',reply:'План',from:'2026-11-04',tasks:[{ref:'a',title:'Видео',owner:'user',quote:'видео',durationSource:'unknown'}]},s,'Завтра видео',now),e=>e.code==='schedule_duration');
 });
+test('essential clarification cannot smuggle a different set of changes',()=>{
+ assert.throws(()=>previewPlan({intent:'plan',reply:'Уточни',questions:['Во сколько?'],tasks:[]},initialState(),'Составь день',now),e=>e.code==='clarification_first');
+});
 test('agent reads old record through tool, then answers without a write',async()=>{
  const s=initialState();s.tasks.push({id:'old',title:'Ролик',status:'open',revision:1});let calls=0;
  const model=new DeepSeekModel({DEEPSEEK_API_KEY:'test'},{fetcher:async(_,options)=>{

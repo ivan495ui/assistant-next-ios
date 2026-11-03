@@ -17,7 +17,7 @@ export class DeepSeekModel {
     const messages=[{role:'system',content:SYSTEM},{role:'user',content:JSON.stringify(modelContext(state,text,now))}];
     const total={input:0,output:0,usd:0,calls:0};
     let checkedChanges=null;
-    for(let turn=0;turn<3;turn++){
+    try {for(let turn=0;turn<3;turn++){
     let response;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
     try {response=await this.fetcher('https://api.deepseek.com/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+this.env.DEEPSEEK_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-flash',thinking:{type:'enabled'},reasoning_effort:'low',max_tokens:12000,response_format:{type:'json_object'},tools:agentTools,tool_choice:turn===2?'none':'auto',messages}),signal:controller.signal});}
     catch(error) {
@@ -43,7 +43,10 @@ export class DeepSeekModel {
       }
       continue;
     }
-    let extraction;try{extraction=JSON.parse(message.content);}catch{throw new AppError('ai_json','Не удалось прочитать план. Исходный текст сохранён.',503);}
+    let extraction;try{extraction=JSON.parse(message.content);}catch{
+      if(turn<2){messages.push(message,{role:'user',content:'Ответ не удалось прочитать как JSON. Верни один корректный JSON по контракту, без обрамления. Ничего не сохранено.'});continue;}
+      throw new AppError('ai_json','Не удалось прочитать план. Исходный текст сохранён.',503);
+    }
     try{
       const checked=previewPlan(extraction,state,text,now);
       if(!checked.answerOnly&&JSON.stringify(checked.changes)!==checkedChanges&&turn<2){
@@ -59,5 +62,6 @@ export class DeepSeekModel {
     }
     }
     throw new AppError('agent_steps','Не удалось завершить проверку. Исходная просьба сохранена.',503);
+    }catch(error){if(total.calls&&error.code!=='ai_uncertain')error.usage=total;throw error;}
   }
 }
