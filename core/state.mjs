@@ -11,5 +11,5 @@ export function assertState(state) {
 }
 export function publicSnapshot(state,{aiAvailable=false,now=Date.now()}={}) {
   const value=copy(state);
-  return {ok:true,schema:1,serverTime:new Date(now).toISOString(),dataRevision:value.dataRevision,profile:value.profile,tasks:value.tasks,events:value.events,projects:value.projects,memory:value.memory,messages:value.messages,proposals:value.proposals.map(({raw,...p})=>p),jobs:value.jobs.map(({inputHash,text,lease,reservation,...j})=>j),syncJobs:value.syncJobs,aiAvailable};
+  return {ok:true,schema:1,serverTime:new Date(now).toISOString(),dataRevision:value.dataRevision,profile:value.profile,tasks:value.tasks,events:value.events,projects:value.projects,memory:value.memory,messages:value.messages,proposals:value.proposals.map(({raw,...p})=>({...p,editable:!!raw,actions:p.actions.map(a=>a.kind==='archive'?{...a,after:{id:a.id,title:a.title,revision:1}}:a)})),jobs:value.jobs.map(({inputHash,text,lease,reservation,...j})=>j),syncJobs:value.syncJobs,aiAvailable};
 }

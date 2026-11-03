@@ -3,7 +3,7 @@ import {Engine} from './engine.mjs';
 import {DeepSeekModel} from './model.mjs';
 import {handle,authorized,json} from './http.mjs';
 export class AssistantOwner {
-  constructor(ctx,env){this.ctx=ctx;this.env=env;ctx.blockConcurrencyWhile(async()=>{this.repository=await DurableRepository.open(ctx.storage);this.engine=new Engine(this.repository,{model:new DeepSeekModel(env),limits:{day:Number(env.AI_DAILY_LIMIT||0.10),month:Number(env.AI_MONTHLY_LIMIT||1)}});await this.engine.recoverInterrupted();});}
+  constructor(ctx,env){this.ctx=ctx;this.env=env;ctx.blockConcurrencyWhile(async()=>{this.repository=await DurableRepository.open(ctx.storage);this.engine=new Engine(this.repository,{model:new DeepSeekModel(env),limits:{day:Number(env.AI_DAILY_LIMIT||0.10),month:Number(env.AI_MONTHLY_LIMIT||1),baselineUsd:Number(env.AI_BASELINE_USD||0),baselineDay:env.AI_BASELINE_DAY||'',baselineMonth:env.AI_BASELINE_MONTH||''}});await this.engine.recoverInterrupted();});}
   async fetch(request){return handle(request,this.engine,{token:this.env.APP_TOKEN,scheduleJob:async()=>{await this.ctx.storage.setAlarm(Date.now()+50);}});}
   async alarm(){
     const jobs=(await this.repository.read()).jobs.filter(j=>j.status==='queued');

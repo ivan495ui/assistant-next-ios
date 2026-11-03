@@ -46,8 +46,10 @@ dictation and background behavior require device verification.
 - POST /v1/proposals/edit {proposalID,taskID,durationMinutes,dueDate}
 - POST /v1/tasks: create/edit/complete with requestID and expectedRevision
 - POST /v1/profile: explicit settings update with expectedRevision
+- POST /v1/import/preview: legacy 25.3 export, preview before applying; full source retained
 
 Cloudflare entry server/worker.mjs stores owner state and jobs in a SQLite Durable Object.
+Long state is chunked within an atomic transaction, rather than exceeding one storage value.
 Google synchronization is deliberately disabled in this candidate. Saved internal records
 are never described as successfully written to Google. Existing installations and their
 data are not modified by building or running this candidate.

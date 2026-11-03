@@ -59,6 +59,7 @@ struct Proposal: Codable, Identifiable {
     var actions: [PlanAction]
     var warnings: [String]
     var unscheduled: [Unscheduled]
+    var editable: Bool?
 }
 struct Job: Codable, Identifiable {
     var id: String
@@ -102,4 +103,5 @@ enum Dates {
     static func day(_ date: Date, zone: String) -> String {let f = DateFormatter(); f.calendar = calendar(zone); f.timeZone = f.calendar.timeZone; f.dateFormat = "yyyy-MM-dd"; return f.string(from:date)}
     static func time(_ date: Date, zone: String) -> String {let f = DateFormatter(); f.timeZone = TimeZone(identifier:zone); f.dateFormat = "HH:mm"; return f.string(from:date)}
     static func label(_ date: Date, format: String = "d MMMM", zone: String) -> String {let f = DateFormatter(); f.locale = Locale(identifier:"ru_RU"); f.timeZone = TimeZone(identifier:zone); f.dateFormat = format; return f.string(from:date)}
+    static func dueLabel(_ value:String,zone:String)->String {guard let date=parse(value+"T12:00:00Z") else{return value};return label(date,format:"d MMM",zone:zone)}
 }

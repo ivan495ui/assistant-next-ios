@@ -15,7 +15,8 @@ const pending=new Set();
 const scheduleJob=async id=>{if(pending.has(id))return;pending.add(id);setImmediate(()=>engine.run(id).finally(()=>pending.delete(id)));};
 const server=http.createServer(async(req,res)=>{
   try {
-    let size=0,chunks=[];for await(const chunk of req){size+=chunk.length;if(size>160000){res.writeHead(413);res.end();return;}chunks.push(chunk);}
+    const maximum=req.url==='/v1/import/preview'?1200000:160000;
+    let size=0,chunks=[];for await(const chunk of req){size+=chunk.length;if(size>maximum){res.writeHead(413);res.end();return;}chunks.push(chunk);}
     const request=new Request('http://127.0.0.1'+req.url,{method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
     const response=await handle(request,engine,{token,scheduleJob});res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
   }catch{res.writeHead(503,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:false,error:'Не удалось завершить запрос.'}));}

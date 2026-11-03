@@ -28,8 +28,19 @@ struct TaskLine: View {
     var onOpen:()->Void
     var body:some View {
         HStack(alignment:.top,spacing:14){
-            Button{Task{await store.toggle(task)}}label:{Image(systemName:task.status=="done" ? "checkmark.circle.fill":"circle").font(.system(size:23,weight:.light)).foregroundStyle(task.status=="done" ? Design.accent:Design.secondary.opacity(0.65))}.buttonStyle(.plain).accessibilityLabel(task.status=="done" ? "Вернуть дело":"Отметить выполненным")
-            Button(action:onOpen){VStack(alignment:.leading,spacing:6){Text(task.displayTitle).font(.system(size:16,weight:.medium)).foregroundStyle(task.status=="done" ? Design.secondary:Color.primary).strikethrough(task.status=="done");HStack(spacing:8){if let duration=task.durationMinutes {Text("\(duration) мин"+(task.durationEstimated==true ? " · оценка":""))};if let day=task.dueDate {Text("до "+day)};if let pid=task.projectID,let p=store.snapshot.projects.first(where:{$0.id==pid}){Text(p.displayTitle).foregroundStyle(Design.accent)}}.font(.caption).foregroundStyle(Design.secondary).lineLimit(2)}.frame(maxWidth:.infinity,alignment:.leading).contentShape(Rectangle())}.buttonStyle(.plain)
+            Button{Task{await store.toggle(task)}}label:{Image(systemName:task.status=="done" ? "checkmark.circle.fill":"circle").font(.system(size:23,weight:.light)).foregroundStyle(task.status=="done" ? Design.accent:Design.secondary.opacity(0.65)).frame(width:44,height:44).contentShape(Rectangle())}.buttonStyle(.plain).accessibilityLabel(task.status=="done" ? "Вернуть дело":"Отметить выполненным")
+            Button(action:onOpen) {
+                VStack(alignment:.leading,spacing:6) {
+                    Text(task.displayTitle).font(.system(size:16,weight:.medium)).foregroundStyle(task.status=="done" ? Design.secondary:Color.primary).strikethrough(task.status=="done")
+                    HStack(spacing:8) {
+                        if let duration=task.durationMinutes {Text("\(duration) мин"+(task.durationEstimated==true ? " · оценка":""))}
+                        if let day=task.dueDate {Text("до "+Dates.dueLabel(day,zone:store.zone))}
+                    }.font(.caption).foregroundStyle(Design.secondary)
+                    if let pid=task.projectID,let p=store.snapshot.projects.first(where:{$0.id==pid}) {
+                        Text(p.displayTitle).font(.caption).foregroundStyle(Design.accent).lineLimit(1)
+                    }
+                }.frame(maxWidth:.infinity,alignment:.leading).contentShape(Rectangle())
+            }.buttonStyle(.plain)
             Image(systemName:"chevron.right").font(.caption2).foregroundStyle(Design.secondary.opacity(0.5)).padding(.top,5)
         }.padding(.vertical,13)
     }

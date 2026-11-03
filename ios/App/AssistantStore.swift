@@ -132,4 +132,12 @@ import Combine
         let access=url.startAccessingSecurityScopedResource();defer{if access{url.stopAccessingSecurityScopedResource()}}
         do {let config=try JSONDecoder().decode(Connection.self,from:Data(contentsOf:url));await connect(config)}catch{notice="Не удалось прочитать файл подключения."}
     }
+    func importLegacy(_ url: URL) async {
+        let access=url.startAccessingSecurityScopedResource();defer{if access{url.stopAccessingSecurityScopedResource()}}
+        do {
+            let data=try Data(contentsOf:url)
+            guard data.count<=1200000,let object=try JSONSerialization.jsonObject(with:data) as? [String:Any] else {throw APIError(status:0,message:"Нужен JSON-экспорт 25.3 размером до 1,2 МБ.")}
+            await enqueue(route:"import/preview",values:object)
+        }catch{notice=error.localizedDescription}
+    }
 }

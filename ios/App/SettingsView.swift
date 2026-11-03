@@ -6,12 +6,14 @@ struct SettingsView:View {
     @State private var showConnection=false
     @State private var showProfile=false
     @State private var importing=false
+    @State private var importingLegacy=false
+    @State private var importPlan:Proposal?
     var body:some View {
         NavigationStack {
             Form {
                 Section("Подключение") {
                     Label(store.connected ? "Помощник подключён":"Подключение не добавлено",systemImage:store.connected ? "checkmark.circle":"link")
-                    Button("Импортировать файл подключения"){importing=true}
+                    Button("Импортировать файл подключения"){importingLegacy=false;importing=true}
                     Button("Указать подключение вручную"){showConnection=true}
                     Button("Обновить данные"){Task{await store.refresh()}}
                 }
@@ -32,13 +34,25 @@ struct SettingsView:View {
                     LabeledContent("Google",value:"Синхронизация не включена")
                     Text("Рабочая версия 25.3 и её данные сохранены отдельно. Эта версия использует собственное хранилище.").font(.caption).foregroundStyle(Design.secondary)
                 }
+                Section("Перенос из прежней версии") {
+                    Button("Открыть экспорт 25.3"){importingLegacy=true;importing=true}
+                    Text("Сначала появится предварительный просмотр. Старый файл и записи Google не изменяются.").font(.caption).foregroundStyle(Design.secondary)
+                }
                 Section {Text("Ассистент · новая версия 4.0 (1)").font(.caption).foregroundStyle(Design.secondary)}
             }
             .scrollContentBackground(.hidden).background(Design.background).navigationTitle("Настройки")
             .toolbar{ToolbarItem(placement:.confirmationAction){Button("Готово"){dismiss()}}}
             .sheet(isPresented:$showConnection){ConnectionView()}
             .sheet(isPresented:$showProfile){ProfileEditor()}
-            .fileImporter(isPresented:$importing,allowedContentTypes:[.json]){result in if case .success(let url)=result{Task{await store.importConnection(url)}}}
+            .sheet(item:$importPlan){PlanView(proposalID:$0.id)}
+            .fileImporter(isPresented:$importing,allowedContentTypes:[.json]) {result in
+                if case .success(let url)=result {
+                    Task {
+                        if importingLegacy {await store.importLegacy(url);importPlan=store.latestProposal}
+                        else {await store.importConnection(url)}
+                    }
+                }
+            }
         }
     }
 }

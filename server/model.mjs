@@ -16,11 +16,13 @@ export class DeepSeekModel {
     let response;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
     try {response=await this.fetcher('https://api.deepseek.com/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+this.env.DEEPSEEK_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-flash',thinking:{type:'disabled'},temperature:0.2,max_tokens:6000,response_format:{type:'json_object'},messages:[{role:'system',content:SYSTEM},{role:'user',content:JSON.stringify(modelContext(state,text,now))}]}),signal:controller.signal});}
     catch(error) {
+      clearTimeout(timer);
       const diagnostic=error?.name==='TypeError'&&/invocation/i.test(error.message)?'binding':error?.name==='TimeoutError'||error?.name==='AbortError'?'timeout':error?.name==='TypeError'&&/AbortSignal|timeout is not/i.test(error.message)?'timeout_api':'network';
       throw new AppError('ai_uncertain','Ответ ИИ не получен. Просьба сохранена; платный запрос автоматически не повторяется. Код: '+diagnostic+'.',503);
-    }finally{clearTimeout(timer);}
+    }
+    if(!response.ok)clearTimeout(timer);
     ensure(response.ok,'ai_http','Сервис ИИ временно недоступен (HTTP '+response.status+'). Просьба сохранена.',503);
-    let data;try{data=await response.json();}catch{throw new AppError('ai_uncertain','Сервис вернул неполный ответ. Просьба сохранена.',503);}
+    let data;try{data=await response.json();}catch{throw new AppError('ai_uncertain','Сервис вернул неполный ответ. Просьба сохранена.',503);}finally{clearTimeout(timer);}
     ensure(data.choices?.[0]?.finish_reason==='stop','ai_truncated','Ответ ИИ оборвался. Ничего из неполного плана не применено.',503);
     let extraction;try{extraction=JSON.parse(data.choices[0].message.content);}catch{throw new AppError('ai_json','Не удалось прочитать план. Исходный текст сохранён.',503);}
     const usage=data.usage||{};

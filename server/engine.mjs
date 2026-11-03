@@ -5,6 +5,7 @@ import {buildProposal,confirmProposal} from '../core/proposal.mjs';
 import {validDate,zoneValid,localDate} from '../core/time.mjs';
 import {reservationFor,DeepSeekModel} from './model.mjs';
 import {modelContext} from './prompt.mjs';
+import {previewLegacyImport} from '../core/legacy.mjs';
 
 export class Engine {
   constructor(repository,{model=new DeepSeekModel({}),now=()=>Date.now(),limits={day:0.10,month:1}}={}){Object.assign(this,{repository,model,now,limits});}
@@ -29,7 +30,7 @@ export class Engine {
         if(job.status!=='queued')return null;
         ensure(this.model.available,'ai_not_connected','ИИ пока не подключён. Текст сохранён, ручные дела доступны.',503);
         const now=this.now(),day=localDate(now,state.profile.timeZone),month=day.slice(0,7),reserve=reservationFor(modelContext(state,job.text,now));
-        const used=range=>state.usage.filter(u=>u.day.startsWith(range)).reduce((sum,u)=>sum+u.charged,0);
+        const used=range=>state.usage.filter(u=>u.day.startsWith(range)).reduce((sum,u)=>sum+u.charged,0)+(range===this.limits.baselineDay||range===this.limits.baselineMonth?Number(this.limits.baselineUsd||0):0);
         ensure(used(day)+reserve<=this.limits.day+1e-9&&used(month)+reserve<=this.limits.month+1e-9,'budget','Достигнут установленный бюджет ИИ. Текст сохранён; ручное планирование доступно.',429);
         state.usage.push({id:job.id,day,reserved:reserve,charged:reserve,status:'reserved'});
         job.status='running';job.updatedAt=new Date(now).toISOString();job.reservation=reserve;
@@ -57,9 +58,11 @@ export class Engine {
   }
   async confirm(proposalID){return this.repository.transact(state=>{const result=confirmProposal(state,proposalID,{now:this.now()});Object.assign(state,result.state);return {ok:true,receipt:result.receipt,duplicate:result.duplicate};});}
   async decline(proposalID){return this.repository.transact(state=>{const p=state.proposals.find(p=>p.id===proposalID);ensure(p&&p.status==='draft','proposal_missing','Предложение уже закрыто.',409);p.status='declined';return {ok:true};});}
+  async importPreview(input){return this.repository.transact(async state=>{const result=await previewLegacyImport(input,state,{now:this.now()});if(!result.duplicate){for(const p of state.proposals)if(p.status==='draft')p.status='superseded';state.proposals.push(result.proposal);}return {ok:true,proposalID:result.proposal.id,duplicate:result.duplicate};});}
   async editProposal({proposalID,taskID,durationMinutes,dueDate}) {
     return this.repository.transact(state=>{
       const p=state.proposals.find(p=>p.id===proposalID);ensure(p&&p.status==='draft','proposal_missing','Предложение уже закрыто.',409);
+      ensure(p.raw,'import_edit','Перенос сохраняет исходные данные. Пункты можно изменить после подтверждения переноса.');
       ensure(p.baseRevision===state.dataRevision,'proposal_stale','Дела изменились. Сначала обнови предложение.',409);
       const action=p.actions.find(a=>a.id===taskID&&a.kind==='task');ensure(action,'task_missing','Пункт не найден.');
       const raw=copy(p.raw);let rawTask=raw.tasks.find(t=>t.id===taskID)||raw.tasks.find((t,i)=>`${p.id}-task-${i}`===taskID);

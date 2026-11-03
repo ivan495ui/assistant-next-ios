@@ -175,74 +175,6 @@
         },
         {
           "kind": "task",
-          "id": "task-script",
-          "title": "Переснять первый ролик: сценарий",
-          "before": {
-            "id": "task-script",
-            "title": "Переснять первый ролик: сценарий",
-            "durationMinutes": 60,
-            "durationEstimated": false,
-            "priority": 1,
-            "dueDate": "2026-11-04",
-            "start": "2026-11-04T06:00:00.000Z",
-            "end": "2026-11-04T07:00:00.000Z",
-            "projectID": "project-film",
-            "status": "open",
-            "revision": 1,
-            "dependsOn": []
-          },
-          "after": {
-            "id": "task-script",
-            "title": "Переснять первый ролик: сценарий",
-            "durationMinutes": 60,
-            "durationEstimated": false,
-            "priority": 1,
-            "dueDate": "2026-11-04",
-            "start": "2026-11-04T06:00:00.000Z",
-            "end": "2026-11-04T07:00:00.000Z",
-            "projectID": "project-film",
-            "status": "open",
-            "revision": 2,
-            "dependsOn": []
-          }
-        },
-        {
-          "kind": "task",
-          "id": "task-voice",
-          "title": "Записать озвучку",
-          "before": {
-            "id": "task-voice",
-            "title": "Записать озвучку",
-            "durationMinutes": 35,
-            "durationEstimated": true,
-            "priority": 2,
-            "start": "2026-11-04T07:10:00.000Z",
-            "end": "2026-11-04T07:45:00.000Z",
-            "projectID": "project-film",
-            "status": "open",
-            "revision": 1,
-            "dependsOn": [
-              "task-script"
-            ]
-          },
-          "after": {
-            "id": "task-voice",
-            "title": "Записать озвучку",
-            "durationMinutes": 35,
-            "durationEstimated": true,
-            "priority": 2,
-            "start": "2026-11-04T07:10:00.000Z",
-            "end": "2026-11-04T07:45:00.000Z",
-            "projectID": "project-film",
-            "status": "open",
-            "revision": 2,
-            "dependsOn": [
-              "task-script"
-            ]
-          }
-        },
-        {
-          "kind": "task",
           "id": "task-track",
           "title": "Доработать аранжировку",
           "before": {
@@ -274,10 +206,10 @@
         }
       ],
       "warnings": [
-        "«Записать озвучку»: 35 мин — оценка, её можно изменить.",
         "«Доработать аранжировку»: 90 мин — оценка, её можно изменить."
       ],
-      "unscheduled": []
+      "unscheduled": [],
+      "editable": true
     }
   ],
   "jobs": [],

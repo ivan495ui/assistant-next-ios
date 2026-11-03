@@ -1,6 +1,14 @@
 import {copy,ensure} from './errors.mjs';
 import {defaultWindows,schedule} from './scheduler.mjs';
 import {addDays,wall,localDate,overlap} from './time.mjs';
+function unchangedTask(before,after) {
+  if(!before)return false;
+  const fields=['title','durationMinutes','dueDate','priority','projectID','status'];
+  if(fields.some(key=>(before[key]??null)!==(after[key]??null)))return false;
+  if(!!before.durationEstimated!==!!after.durationEstimated)return false;
+  for(const key of ['start','end','deadlineAt','notBefore','fixedStart'])if((before[key]?Date.parse(before[key]):null)!==(after[key]?Date.parse(after[key]):null))return false;
+  return JSON.stringify(before.dependsOn||[])===JSON.stringify(after.dependsOn||[]);
+}
 
 export function buildProposal(raw,state,{id,now=Date.now()}) {
   const actions=[],warnings=[],projectIDs=new Map();
@@ -9,7 +17,8 @@ export function buildProposal(raw,state,{id,now=Date.now()}) {
   for(const move of raw.eventMoves) {
     const before=events.find(e=>e.id===move.id),length=Date.parse(before.end)-Date.parse(before.start);
     const after={...before,start:move.start,end:new Date(Date.parse(move.start)+length).toISOString(),revision:before.revision+1};
-    events.splice(events.indexOf(before),1,after);actions.push({kind:'event',id:before.id,title:before.title,before:copy(before),after});
+    events.splice(events.indexOf(before),1,after);
+    if(Date.parse(before.start)!==Date.parse(after.start))actions.push({kind:'event',id:before.id,title:before.title,before:copy(before),after});
   }
   raw.newEvents.forEach((e,i)=>{const eid=`${id}-event-${i}`,after={id:eid,title:e.title,start:e.start,end:e.end,allDayDate:null,fixed:true,source:'assistant',revision:1};events.push(after);actions.push({kind:'event',id:eid,title:e.title,before:null,after});});
   // Refuse explicit moves into another fixed event. Never silently shift a meeting.
@@ -50,6 +59,7 @@ export function buildProposal(raw,state,{id,now=Date.now()}) {
   for(const task of [...result.scheduled,...result.unscheduled]) {
     const before=state.tasks.find(t=>t.id===task.id)||null;
     const {order,reason,allDependencies,...after}=task;after.dependsOn=allDependencies||task.dependsOn;
+    if(unchangedTask(before,after))continue;
     if(task.durationEstimated)warnings.push(`«${task.title}»: ${task.durationMinutes} мин — оценка, её можно изменить.`);
     actions.push({kind:'task',id:task.id,title:task.title,before:before?copy(before):null,after});
   }
@@ -67,7 +77,7 @@ export function confirmProposal(state,proposalID,{now=Date.now()}={}) {
   ensure(proposal.baseRevision===state.dataRevision,'proposal_stale','Дела изменились после подготовки плана. Обнови предложение перед подтверждением.',409);
   const next=copy(state),results=[];
   for(const action of proposal.actions) {
-    const collection={task:'tasks',event:'events',project:'projects',memory:'memory'}[action.kind];
+    const collection={task:'tasks',event:'events',project:'projects',memory:'memory',message:'messages',archive:'legacyImports'}[action.kind];
     ensure(collection,'action','Неизвестное действие.',500);
     const list=next[collection],index=list.findIndex(x=>x.id===action.id);
     ensure(action.before?(index>=0&&list[index].revision===action.before.revision):index<0,'revision','Запись изменилась после подготовки плана.',409);
