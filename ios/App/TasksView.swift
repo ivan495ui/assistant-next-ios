@@ -34,7 +34,7 @@ struct TaskEditor: View {
                     Toggle("Оценить длительность",isOn:$knownDuration)
                     if knownDuration {Stepper("\(duration) минут",value:$duration,in:5...1440,step:5)}
                     Toggle("Есть срок",isOn:$hasDue)
-                    if hasDue {DatePicker("Успеть до",selection:$due,displayedComponents:.date)}
+                    if hasDue {DatePicker("Успеть до",selection:$due,displayedComponents:.date).environment(\.timeZone,TimeZone(identifier:store.zone) ?? .current)}
                 } footer: {
                     Text("Дата без времени останется сроком. Встреча в полночь не создаётся.")
                 }
@@ -69,7 +69,7 @@ struct TaskEditor: View {
             if let task {
                 title=task.displayTitle;duration=task.durationMinutes ?? 30;knownDuration=task.durationMinutes != nil
                 hasDue=task.dueDate != nil;projectID=task.projectID ?? ""
-                if let date=task.dueDate {due=Dates.parse(date+"T12:00:00Z") ?? Date()}
+                if let date=task.dueDate {due=Dates.dateOnly(date,zone:store.zone) ?? Date()}
             }
         }
     }

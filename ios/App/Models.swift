@@ -103,5 +103,11 @@ enum Dates {
     static func day(_ date: Date, zone: String) -> String {let f = DateFormatter(); f.calendar = calendar(zone); f.timeZone = f.calendar.timeZone; f.dateFormat = "yyyy-MM-dd"; return f.string(from:date)}
     static func time(_ date: Date, zone: String) -> String {let f = DateFormatter(); f.timeZone = TimeZone(identifier:zone); f.dateFormat = "HH:mm"; return f.string(from:date)}
     static func label(_ date: Date, format: String = "d MMMM", zone: String) -> String {let f = DateFormatter(); f.locale = Locale(identifier:"ru_RU"); f.timeZone = TimeZone(identifier:zone); f.dateFormat = format; return f.string(from:date)}
-    static func dueLabel(_ value:String,zone:String)->String {guard let date=parse(value+"T12:00:00Z") else{return value};return label(date,format:"d MMM",zone:zone)}
+    static func dateOnly(_ value:String,zone:String)->Date? {
+        let pieces=value.split(separator:"-").compactMap{Int($0)}
+        guard pieces.count==3 else{return nil}
+        return calendar(zone).date(from:DateComponents(year:pieces[0],month:pieces[1],day:pieces[2],hour:12))
+    }
+    static func dueLabel(_ value:String,zone:String)->String {guard let date=dateOnly(value,zone:zone) else{return value};return label(date,format:"d MMM",zone:zone)}
 }
+func jsonNullable<T>(_ value:T?)->Any {if let value{return value};return NSNull()}

@@ -119,7 +119,7 @@ import Combine
     func decline(_ id: String) async {await enqueue(route:"proposals/decline",values:["proposalID":id])}
     func saveTask(existing: Entity?,title: String,duration: Int?,dueDate: String?,projectID: String?,done: Bool = false) async {
         let id=UUID().uuidString
-        var values:[String:Any]=["requestID":id,"title":title,"durationMinutes":duration as Any? ?? NSNull(),"dueDate":dueDate as Any? ?? NSNull(),"projectID":projectID as Any? ?? NSNull(),"status":done ? "done":"open"]
+        var values:[String:Any]=["requestID":id,"title":title,"durationMinutes":jsonNullable(duration),"dueDate":jsonNullable(dueDate),"projectID":jsonNullable(projectID),"status":done ? "done":"open"]
         if let existing {values["id"]=existing.id;values["expectedRevision"]=existing.revision}
         await enqueue(route:"tasks",values:values,id:id)
     }
@@ -127,7 +127,7 @@ import Combine
     func saveProfile(_ profile: Profile,revision: Int) async {
         do {let object=try JSONSerialization.jsonObject(with:JSONEncoder().encode(profile));await enqueue(route:"profile",values:["profile":object,"expectedRevision":revision])}catch{notice=error.localizedDescription}
     }
-    func editPlan(_ proposal: Proposal,action: PlanAction,duration: Int,dueDate: String?) async {await enqueue(route:"proposals/edit",values:["proposalID":proposal.id,"taskID":action.id,"durationMinutes":duration,"dueDate":dueDate as Any? ?? NSNull()])}
+    func editPlan(_ proposal: Proposal,action: PlanAction,duration: Int,dueDate: String?) async {await enqueue(route:"proposals/edit",values:["proposalID":proposal.id,"taskID":action.id,"durationMinutes":duration,"dueDate":jsonNullable(dueDate)])}
     func importConnection(_ url: URL) async {
         let access=url.startAccessingSecurityScopedResource();defer{if access{url.stopAccessingSecurityScopedResource()}}
         do {let config=try JSONDecoder().decode(Connection.self,from:Data(contentsOf:url));await connect(config)}catch{notice="Не удалось прочитать файл подключения."}

@@ -29,7 +29,7 @@ $1/month. Pricing reference: https://api-docs.deepseek.com/quick_start/pricing/ 
 
 Native SwiftUI, iOS 26+, XcodeGen project at ios/project.yml. The manual workflow builds
 an unsigned device IPA, launches an isolated simulator and runs UI checks. No signing
-credential is uploaded. Simulator fixtures require --demo and are compiled out on device.
+credential is uploaded. Demo mode requires --demo and is compiled out on device.
 
 The new bundle ID app.assistant.next allows side-by-side evaluation without replacing
 the previous application. A private JSON connection file has shape
