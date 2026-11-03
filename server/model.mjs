@@ -9,13 +9,16 @@ export function reservationFor(context) {
   return (bytes*rates.input+6000*rates.output)/1000000;
 }
 export class DeepSeekModel {
-  constructor(env,{fetcher=fetch}={}) {this.env=env;this.fetcher=fetcher;}
+  constructor(env,{fetcher=(...args)=>fetch(...args)}={}) {this.env=env;this.fetcher=fetcher;}
   get available(){return !!this.env.DEEPSEEK_API_KEY;}
   async extract(state,text,now) {
     ensure(this.available,'ai_not_connected','ИИ пока не подключён. Можно вручную добавлять дела и пользоваться расписанием.',503);
-    let response;
-    try {response=await this.fetcher('https://api.deepseek.com/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+this.env.DEEPSEEK_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-flash',thinking:{type:'disabled'},temperature:0.2,max_tokens:6000,response_format:{type:'json_object'},messages:[{role:'system',content:SYSTEM},{role:'user',content:JSON.stringify(modelContext(state,text,now))}]}),signal:AbortSignal.timeout(90000)});}
-    catch {throw new AppError('ai_uncertain','Ответ ИИ не получен. Просьба сохранена; платный запрос автоматически не повторяется.',503);}
+    let response;const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
+    try {response=await this.fetcher('https://api.deepseek.com/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+this.env.DEEPSEEK_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-flash',thinking:{type:'disabled'},temperature:0.2,max_tokens:6000,response_format:{type:'json_object'},messages:[{role:'system',content:SYSTEM},{role:'user',content:JSON.stringify(modelContext(state,text,now))}]}),signal:controller.signal});}
+    catch(error) {
+      const diagnostic=error?.name==='TypeError'&&/invocation/i.test(error.message)?'binding':error?.name==='TimeoutError'||error?.name==='AbortError'?'timeout':error?.name==='TypeError'&&/AbortSignal|timeout is not/i.test(error.message)?'timeout_api':'network';
+      throw new AppError('ai_uncertain','Ответ ИИ не получен. Просьба сохранена; платный запрос автоматически не повторяется. Код: '+diagnostic+'.',503);
+    }finally{clearTimeout(timer);}
     ensure(response.ok,'ai_http','Сервис ИИ временно недоступен (HTTP '+response.status+'). Просьба сохранена.',503);
     let data;try{data=await response.json();}catch{throw new AppError('ai_uncertain','Сервис вернул неполный ответ. Просьба сохранена.',503);}
     ensure(data.choices?.[0]?.finish_reason==='stop','ai_truncated','Ответ ИИ оборвался. Ничего из неполного плана не применено.',503);

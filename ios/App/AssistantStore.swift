@@ -124,6 +124,9 @@ import Combine
         await enqueue(route:"tasks",values:values,id:id)
     }
     func toggle(_ task: Entity) async {await saveTask(existing:task,title:task.displayTitle,duration:task.durationMinutes,dueDate:task.dueDate,projectID:task.projectID,done:task.status != "done")}
+    func saveProfile(_ profile: Profile,revision: Int) async {
+        do {let object=try JSONSerialization.jsonObject(with:JSONEncoder().encode(profile));await enqueue(route:"profile",values:["profile":object,"expectedRevision":revision])}catch{notice=error.localizedDescription}
+    }
     func editPlan(_ proposal: Proposal,action: PlanAction,duration: Int,dueDate: String?) async {await enqueue(route:"proposals/edit",values:["proposalID":proposal.id,"taskID":action.id,"durationMinutes":duration,"dueDate":dueDate as Any? ?? NSNull()])}
     func importConnection(_ url: URL) async {
         let access=url.startAccessingSecurityScopedResource();defer{if access{url.stopAccessingSecurityScopedResource()}}
